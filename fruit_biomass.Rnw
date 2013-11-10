@@ -1,0 +1,125 @@
+\documentclass{article}
+\usepackage{longtable}
+\usepackage{indentfirst}
+\usepackage{fixltx2e}
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage[url=false,style=numeric,backend=bibtex]{biblatex}
+%\usepackage[american]{babel}
+%\usepackage{csquotes} 
+%\usepackage[style=apa,url=false]{biblatex} 
+%\DeclareLanguageMapping{american}{american-apa}
+%\usepackage[T1]{fontenc}
+\addbibresource{HomeRanges.bib}
+\begin{document}
+
+\doublespacing
+
+<<setup, echo=FALSE, message=FALSE, cache=FALSE>>=
+opts_chunk$set(fig.path = 'figure/fruit_pdf/',
+               fig.align='center',
+               cache=TRUE,
+               fig.show='asis',
+               warning = FALSE,
+               message = FALSE,
+               dpi = 150)
+read_chunk('fruit_biomass.R')
+Sys.setenv(TEXINPUTS=getwd(), 
+           BIBINPUTS=getwd(), 
+           BSTINPUTS=getwd())
+@
+
+\title{Supplementary Information}
+
+
+\author{Fernando A. Campos}
+\maketitle
+
+\section*{Creation of the habitat map}
+
+The BRB home range method \parencite{Benhamou2011} can use habitat-specific movement parameters to model the random component of the movement process more realistically. We therefore created a habitat map of the study area using the multispectral SPOT-5 satellite image. We classified the satellite image into four habitat categories by selecting threshold values for NDVI that minimized the number of classification errors in 409 ground control points. We recorded habitat type for each ground control point within about one month of the image acquisition date during the peak dry season of 2011 (date range: March 3--May 15). The habitat categories, defined as in Kalacska \parencite*{Kalacska2004}, included open grassland and bare soil, early successional stage forest, intermediate successional stage forest, and mature / late successional stage forest. Based on the ground control points, the overall accuracy of this classification method was 76\%.
+
+\section*{Justification for using the Biased Random Bridge (BRB) home range method}
+
+A major theoretical weakness with common location-based kernel methods is the assumption that each recorded location point is independent. However, sequential location points are typically highly autocorrelated in both time and space, especially with high-frequency, GPS-based data sets \parencite{Boyce2010, Fieberg2010}. This problem is commonly addressed by data filtering (which results in data loss), rationalizing about the value of autocorrelation itself (which violates the assumptions of the statistical model), or ignoring the problem altogether. By treating the location data as a movement process (i.e. an ordered series of track segments) rather than a point process, movement-based kernel methods explicitly account for autocorrelated data to produce a more biologically relevant home range estimate \parencite{Benhamou2010}. In brief, the movement-based kernel method is as follows: (1) each movement step linking pairs of successive location points is divided into subsegments based on a specified time interval, (2) locations are interpolated for the endpoints of each subsegment, and (3) kernel density estimation is applied to each interpolated location, with a smoothing parameter that varies with the uncertainty of the animal’s location—that is, the smoothing parameter is minimal at the movement step’s endpoints (because this is where the animal’s location was recorded) and maximal at the step’s midpoint \parencite{Benhamou2010}. Crucially, the BRB method implements this framework by including both a “biased” component (the animal’s tendency to drift in the direction on the next location point) and a “random” component (the animal’s tendency to deviate from a straight path to the next location point) that form a bridge between each pair of successive location points \parencite{Benhamou2011}.
+
+\section*{Parameterization of the BRB home range method}
+
+The BRB method requires several parameters that should be based on biological knowledge. First, using the habitat map described above, we calculated habitat-specific diffusion coefficients for each group using the BRB.D function in adehabitatHR on the full set of location points for that focal group \parencite{Calenge2006}. These coefficients govern the speed of random drift through each habitat type. Second, it is necessary to specify a maximum time threshold (T\textsubscript{max}) beyond which pairs of successive location points are not considered linked. Given the discontinuous nature of my location data, with long gaps each night and between different observation blocks, this threshold is necessary to remove these long gaps from the home range calculations. In my data set, time gaps associated with nighttime and inter-block intervals were all greater than eight hours. Ignoring these gaps, 99.9\% of the recording intervals were less than 65 minutes, with 94.7\% falling within 5 minutes of the scheduled 30-minute recording interval. We decided that 90 minutes would be a reasonable T\textsubscript{max}, as recording interval gaps of longer duration are likely to represent cases in which the focal group was lost or not observed for a significant amount of time, but shorter intervals are likely to represent location points with a high degree of autocorrelation. Third, we specified a minimum kernel smoothing parameter (h\textsubscript{min}) of 50 m, a value which accounts for various sources of error in the location data: the group’s center of mass was not always identifiable, the GPS is not perfectly accurate, and the habitat map is subject to georeferrencing errors, classification errors, and geometric distortions due to terrain. Given these sources of error, 50 m seems a reasonable value for h\textsubscript{min}, as it does not assume unrealistic accuracy for the group’s center, and it corresponds approximately to a typical group spread in this species. Finally, the parameter L\textsubscript{min} corresponds to a minimum step length, below which the animal is considered to be stationary. However, even if the group’s center is stationary, there are usually at least some animals who continue to move around while other group members are resting. We therefore included even very short steps in our home range estimates by setting L\textsubscript{min} to a small value of 5 m. Steps with a recorded distance less than 5 m occurred rarely (2.26\% of all steps), and in these cases, we set the smoothing parameter to h\textsubscript{min} for the entire step (i.e. the uncertainty of the group’s location did not vary during the step).
+
+\section*{Fruit Biomass Estimates}
+
+Here's how I calculated fruit biomass, fools!
+
+<<workspace, echo=FALSE, results = 'hide'>>=
+@
+<<pheno_read_csv, echo=FALSE>>=
+@
+<<pheno_clean, echo=FALSE>>=
+@
+<<pheno_index, echo=FALSE>>=
+@
+<<pheno_filter, echo=FALSE>>=
+@
+<<pheno_smooth, echo=FALSE>>=
+@
+
+\begin{figure}
+<<pheno_plot_smooth, echo=FALSE, fig.height=9.5, out.width='\\linewidth'>>=
+@
+\caption{Smoothed fruit availability indices for each species included in the monthly phenology data set.}
+\end{figure}
+
+<<species_table, echo=FALSE, results='asis'>>=
+spe <- xtable(species, caption="Species names and codes of the 53 species included in the fruit phenology data set.")
+print(spe, tabular.environment="longtable", floating=FALSE, include.rownames=FALSE)
+@
+
+<<tr_read_csv, echo=FALSE>>=
+@
+<<tr_clean, echo=FALSE>>=
+@
+<<fpv_read_csv, echo=FALSE>>=
+@
+<<fpv_clean, echo=FALSE>>=
+@
+<<fpv_min_dbh, echo=FALSE>>=
+@
+<<fpv_fix_dbh_brief, echo=FALSE>>=
+@
+<<fpv_dbh_extra, echo=FALSE>>=
+@
+<<tr_filter, echo=FALSE>>=
+@
+<<tr_test_usable, echo=FALSE>>=
+@
+<<biomass_total, echo=FALSE>>=
+@
+<<biomass_available1, echo=FALSE>>=
+@
+<<biomass_monthly1, echo=FALSE>>=
+@
+<<biomass_available2, echo=FALSE>>=
+@
+
+\begin{figure}
+<<biomass_plot_monthly2, echo=FALSE, fig.height=4, out.width='\\linewidth'>>=
+@
+\caption{Estimated total fruit biomass (kg/ha) in the study area for each month of the year.}
+\end{figure}
+
+<<bioimass_interpolation, echo=FALSE>>=
+@
+<<biomass_study_period, echo=FALSE>>=
+@
+
+\begin{figure}
+<<biomass_study_period_plot, echo=FALSE, fig.height=4, out.width='\\linewidth'>>=
+@
+\caption{Daily fruit biomass estimates (kg/ha) during the study period, interpolated between monthly values (red points) using spline smoothing.}
+\end{figure}
+
+\clearpage
+\printbibliography
+
+\end{document}

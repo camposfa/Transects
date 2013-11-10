@@ -1,0 +1,227 @@
+```{r echo=FALSE}
+opts_chunk$set(fig.path = 'figure/fruit/', 
+               fig.height = 6, 
+               fig.width = 12, 
+               tidy = FALSE, 
+               warning = FALSE,
+               cache = TRUE)
+read_chunk('fruit_biomass.R')
+```
+
+# Phenolgy and Biomass
+
+******
+
+<br>
+
+Source files available on [github](https://github.com/camposfa/Transects)
+
+# Major steps
+1. Load phenology data and clean it up: [jump](#id1)
+2. Smooth phenology data to obtain monthly pheno indices: [jump](#id2)
+3. Load transect data and clean it up: [jump](#id3)
+4. Specify minimum DBH thresholds for phenology species in transects: [jump](#id4)
+5. Estimate maximum potential biomass for each species: [jump](#id5)
+6. Combine phenology with transect data to obtain actual monthly biomass estimates: [jump](#id6)
+
+Prepare R environment
+```{r workspace, message = FALSE, results = 'hide'}
+```
+
+******
+
+<br>
+
+<a id="id1"></a>
+## Step 1: Load phenology data and clean it up
+
+### Obtain Data
+
+#### Option 1
+- If you have access, pull current data from PACE database
+- Must create SSH tunnel first using plink
+- Change dsn="PACE" to whatever your PACE ODBC connection is called
+- _Remove comments if using!_
+```{r pheno_read_pace}
+```
+
+#### Option 2
+- [Contact me](mailto:camposfa@gmail.com) if you are interested in the raw data
+```{r pheno_read_csv}
+```
+
+
+### Clean up data
+```{r pheno_clean}
+```
+
+
+### Unique trees for each pheno species
+```{r pheno_table_count_species, cache = TRUE, echo = FALSE , results = 'asis'}
+```
+
+******
+
+### Calculate pheno indices for each phenology record
+- index_avail = (Maturity / 4) x (Coverage / 4)
+- index_avail is maximum (1) if full coverage and maturity
+- index_avail is zero if either coverage or maturity is zero
+```{r pheno_index}
+```
+
+### Filter pheno data (remove some species)
+```{r pheno_filter}
+```
+
+### Monthly plot of index_availability indices for selected species
+```{r pheno_plot_index, fig.height = 12}
+```
+
+******
+
+<br>
+
+<a id="id2"></a>
+## Step 2: Smooth phenology data to obtain monthly pheno indices
+
+### GAM smoothing of phenology data using availability index
+- Applied to each species separately
+- Smoothed with cyclic cubic regression spline, which forces the ends (January / January) to match
+- Using tree_id as random effect
+```{r pheno_smooth}
+```
+
+### Plot all smoothed pheno index_availability estimates
+```{r pheno_plot_smooth, fig.height = 12}
+```
+
+Pheno data for some species looks very problematic, notably ARET, RMON, SOBO, TAME, and TOCH
+
+******
+
+<br>
+
+<a id="id3"></a>
+## Step 3: Load transect data and clean it up
+
+### Load transect data
+- [Contact me](mailto:camposfa@gmail.com) if you are interested in the raw data
+```{r tr_read_csv}
+```
+
+### Clean up transect data
+```{r tr_clean}
+```
+
+******
+
+<br>
+
+<a id="id4"></a>
+## Step 4: Specify minimum DBH thresholds for phenology species in transects
+
+### Load FPV data
+- [Contact me](mailto:camposfa@gmail.com) if you are interested in the raw data
+```{r fpv_read_csv}
+```
+
+### Clean up the FPV data
+```{r fpv_clean}
+```
+
+### Find minimum DBHs from FPV data
+```{r fpv_min_dbh}
+```
+
+### Plot DBHs for each species to identify problem cases
+```{r fpv_plot_dbh}
+```
+
+### Set min dbh for problem species case-by-case
+- I tried automating this, but it didn't work well
+- If you want to see the detail, you can contact me or  check the "fpv_fix_dbh_verbose" chunk of code in the source file
+```{r fpv_fix_dbh_brief}
+```
+
+### Adjust minimum dbh thresholds for 3 additional species: TAME, SEXC, SGLN
+These thresholds have been fudged slightly to include the largest tree(s) of that species in the transects, each of which falls just below the FPV-based cutoff. 
+```{r fpv_dbh_extra}
+```
+
+### Subset tr_pheno to include only pheno species
+```{r tr_filter}
+```
+
+### Determine if each tree in the transect data meets the minimum DBH criteria
+```{r tr_test_usable}
+```
+
+### Number of usable trees in transects
+```{r tr_table_usable, cache = TRUE, echo = FALSE , results = 'asis'}
+```
+
+******
+
+<br>
+
+<a id="id5"></a>
+## Step 5: Estimate maximum potential biomass for each species
+
+### Biomass estimates
+- Assumes every tree is fruiting at max potential
+- Calculated by applying Peters 1998 formula on each tree and multiplying by the proportion of the tree in transect, then summed for each species
+```{r biomass_total}
+```
+
+# Plot max potential biomass for each species
+```{r biomass_plot_max}
+```
+
+******
+
+<br>
+
+<a id="id6"></a>
+## Step 6: Combine phenology with transect data to obtain actual monthly biomass estimates
+
+### Merge fruit index_availability and and biomass data sets
+```{r biomass_available1}
+```
+
+### Aggregate to obtain sum for all species in each month
+```{r biomass_monthly1}
+```
+
+### Plot of monthly biomass estimates
+```{r biomass_plot_monthly1}
+```
+
+The data are strongly affected by a few large, common species that are either very rarely eaten or have very small, wind-dispersed seeds for which Peters' biomass formula is inappropriate. Therefore, I'm repeating the calculation without these species.
+
+### Without GULM and wind-dispersed seeds: LCAN, LSPE, BUNG, CCAN
+```{r biomass_available2}
+```
+
+### Plot of monthly biomass estimates
+```{r biomass_plot_monthly2}
+```
+
+### Total fruit production per hectare over entire year (excluding GULM and LCAN)
+```{r biomass_sum}
+```
+
+### Interpolation of monthly to daily biomass
+```{r bioimass_interpolation}
+```
+
+### Plot interpolated biomass over entire annual cycle
+```{r biomass_interpolation_plot}
+```
+
+### Calculate over my 2010 - 2011 study period
+```{r biomass_study_period}
+```
+
+### Plot daily biomass estimate over my study period
+```{r biomass_study_period_plot}
+```
