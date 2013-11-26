@@ -1,17 +1,10 @@
 ## ---- workspace ----
-setwd("C:/Users/Fernando/Dropbox/R/Transects")
 Sys.setenv(TZ='UTC')
-x <- list("ggplot2", 
-          "RColorBrewer", 
-          "plyr", 
-          "scales", 
-          "reshape2", 
-          "RODBC", 
-          "mgcv",
-          "xtable",
-          "lubridate")
-lapply(x, require, character.only = T)
-
+list.of.packages <- list("ggplot2", "RColorBrewer", "plyr", "scales", 
+                         "reshape2", "RODBC", "mgcv", "xtable", "lubridate")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+lapply(list.of.packages, require, character.only = T)
 
 ## ---- pheno_read_pace ----
 # Must create SSH tunnel first (plink)

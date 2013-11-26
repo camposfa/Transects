@@ -1,3 +1,11 @@
+Phenolgy and Biomass
+==============================
+
+#### Up to [data sets](../index.html)
+******
+Source files available on [github](https://github.com/camposfa/Transects)
+<br>
+
 ```{r echo=FALSE}
 opts_chunk$set(fig.path = 'figure/fruit/', 
                fig.height = 6, 
@@ -7,14 +15,6 @@ opts_chunk$set(fig.path = 'figure/fruit/',
                cache = TRUE)
 read_chunk('fruit_biomass.R')
 ```
-
-# Phenolgy and Biomass
-
-******
-
-<br>
-
-Source files available on [github](https://github.com/camposfa/Transects)
 
 # Major steps
 1. Load phenology data and clean it up: [jump](#id1)
