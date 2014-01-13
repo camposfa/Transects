@@ -33,3 +33,9 @@ fruit_biomass.Rnw
 fruit_biomass.html
 fruit_biomass.md
 fruit_biomass.pdf
+HabitatProductivity.html
+fruit_avail.csv
+*.csv
+*.html
+fruit_biomass_2*
+fruit_biomass.fdb_latexmk

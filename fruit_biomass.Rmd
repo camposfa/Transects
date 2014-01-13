@@ -42,7 +42,7 @@ Prepare R environment
 - Must create SSH tunnel first using plink
 - Change dsn="PACE" to whatever your PACE ODBC connection is called
 - _Remove comments if using!_
-```{r pheno_read_pace}
+```{r pheno_read_pace, eval = FALSE}
 ```
 
 #### Option 2

@@ -1,49 +1,59 @@
-## ---- workspace ----
+
+# ---- workspace ----------------------------------------------------------
+
 Sys.setenv(TZ='UTC')
-list.of.packages <- list("ggplot2", "RColorBrewer", "plyr", "scales", 
+list.of.packages <- c("ggplot2", "RColorBrewer", "plyr", "scales", 
                          "reshape2", "RODBC", "mgcv", "xtable", "lubridate")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) install.packages(new.packages)
+if(length(new.packages)) install.packages(unlist(new.packages))
 lapply(list.of.packages, require, character.only = T)
 
-## ---- pheno_read_pace ----
+
+
+# ---- pheno_read_pace ----------------------------------------------------
+
 # Must create SSH tunnel first (plink)
-# ch <- odbcConnect(dsn = "PACE")
-# pheno.q <- "SELECT 
-# tblTaxon.SpeciesName, 
-# tblTaxon.CodeName, 
-# tblPhenologyTree.ID 
-# AS TreeID,
-# tblPhenologyMonthly.Year, 
-# tblPhenologyMonthly.Month, 
-# tblPhenologyMonthly.DateOf, 
-# tblPhenologyMonthly.FruitCoverID, 
-# tblPhenologyMonthly.FruitMaturityID 
-# FROM 
-# (tblTaxon INNER JOIN tblPhenologyTree 
-# ON tblTaxon.ID = tblPhenologyTree.TaxonID) 
-# INNER JOIN 
-# tblPhenologyMonthly 
-# ON tblPhenologyTree.ID = 
-# tblPhenologyMonthly.PhenologyTreeID
-# ORDER BY 
-# tblTaxon.SpeciesName, 
-# tblPhenologyMonthly.Year, 
-# tblPhenologyMonthly.Month"
-# pheno <- sqlQuery(ch, pheno.q)
-# odbcCloseAll()
+ch <- odbcConnect(dsn = "PACE")
+pheno.q <- "SELECT 
+tblTaxon.SpeciesName, 
+tblTaxon.CodeName, 
+tblPhenologyTree.ID 
+AS TreeID,
+tblPhenologyMonthly.Year, 
+tblPhenologyMonthly.Month, 
+tblPhenologyMonthly.DateOf, 
+tblPhenologyMonthly.FruitCoverID, 
+tblPhenologyMonthly.FruitMaturityID 
+FROM 
+(tblTaxon INNER JOIN tblPhenologyTree 
+ON tblTaxon.ID = tblPhenologyTree.TaxonID) 
+INNER JOIN 
+tblPhenologyMonthly 
+ON tblPhenologyTree.ID = 
+tblPhenologyMonthly.PhenologyTreeID
+ORDER BY 
+tblTaxon.SpeciesName, 
+tblPhenologyMonthly.Year, 
+tblPhenologyMonthly.Month"
+pheno <- sqlQuery(ch, pheno.q)
+odbcCloseAll()
+
 # write.csv(pheno, file = "pace_pheno.csv", row.names = FALSE)
 
 
-## ---- pheno_read_csv ----
+# ---- pheno_read_csv -----------------------------------------------------
+
 pheno <- read.csv("pace_pheno.csv")
 
 
-## ---- pheno_table_raw ----
+
+# ---- pheno_table_raw ----------------------------------------------------
+
 print(xtable(head(pheno)), type = "html")
 
 
-## ---- pheno_clean ----
+# ---- pheno_clean --------------------------------------------------------
+
 # Rename variables for consistent style
 names(pheno) <- c("species_name", 
                   "code_name", 
@@ -73,25 +83,32 @@ count_tree_species <- ddply(ddply(pheno,
                              summarize, 
                              num_trees = length(tree_id))
 
-## ---- pheno_table_count_species ----
+
+# ---- pheno_table_count_species ------------------------------------------
+
 print(xtable(count_tree_species), type = "html")
 
 
-## ---- pheno_index ----
+
+# ---- pheno_index --------------------------------------------------------
+
 pheno$index_avail <- (pheno$fruit_coverage / 4) * (pheno$fruit_maturity / 4)
 
 
-## ---- pheno_filter ----
+# ---- pheno_filter -------------------------------------------------------
+
 # MCAP: only one tree after 2006
 # Ficus sp.: not useful if species unknown
 # BOCE: no pheno trees after 2006
 # HCOU: fruit not eaten
+# SPAV: fruit not eaten, it's the worms
 
 pheno <- subset(pheno, 
-                species_name != "Bunchosia ocellata" &
+                species_name != "Bunchosia ocellata" & 
                   species_name != "Ficus sp." &
                   species_name != "Mastichodendron capiri" &
-                  species_name != "Hymenaea courbaril"
+                  species_name != "Hymenaea courbaril" & 
+                  species_name != "Sebastiana pavoniana"
 )
 
 # Fix some name errors
@@ -105,7 +122,8 @@ species <- unique(pheno[, 1:2])
 row.names(species) <- NULL
 
 
-## ---- pheno_table_count_monthly ----
+# ---- pheno_table_count_monthly ------------------------------------------
+
 # Number of trees each month
 count_tree_monthly <- ddply(ddply(pheno,
                                   .(year_of, month_of, tree_id),
@@ -118,14 +136,16 @@ count_tree_monthly <- ddply(ddply(pheno,
 print(xtable(count_tree_monthly), type = "html")
 
 
-## ---- pheno_plot_index ----
+# ---- pheno_plot_index ---------------------------------------------------
+
 ggplot(pheno, aes(x = month_of, y = index_avail)) + 
   geom_boxplot() + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.25)) +
   facet_wrap(~code_name, ncol = 5)
 
 
-## ---- pheno_smooth ----
+# ---- pheno_smooth -------------------------------------------------------
+
 pheno_gams <- list()
 
 for(i in 1:length(levels(pheno$species_name)))
@@ -178,8 +198,12 @@ fruit_avail <- melt(fruit_avail,
                     id.vars = c("species_name", "code_name"))
 names(fruit_avail)[3] <- "month_of"
 
+# Write csv for later use
+# write.csv(fruit_avail, "fruit_avail.csv", row.names = FALSE)
 
-## ---- pheno_plot_smooth ----
+
+# ---- pheno_plot_smooth --------------------------------------------------
+
 ggplot(fruit_avail, aes(x = month_of, y = value)) +
   geom_bar(stat = "identity", width = 0.7) + 
   facet_wrap(~code_name, ncol = 6) + 
@@ -188,11 +212,14 @@ ggplot(fruit_avail, aes(x = month_of, y = value)) +
   labs(x = "Month", y = "Fruit Availability Index")
 
 
-## ---- tr_read_csv ----
+
+# ---- tr_read_csv --------------------------------------------------------
+
 tr <- read.csv("Transects.csv")
 
 
-## ---- tr_clean ----
+# ---- tr_clean -----------------------------------------------------------
+
 # Rename variables for consistent style
 names(tr) <- c("tree_id", "transect_id", 
                "old_transect_id", "transect_start", 
@@ -242,11 +269,13 @@ tr_pheno[(tr_pheno$code_name=="BPLU" |
               tr_pheno$code_name=="BPIN"),]$n_stems
 
 
-## ---- fpv_read_csv ----
+# ---- fpv_read_csv -------------------------------------------------------
+
 fpv <- read.csv("AllFPV.csv")
 
 
-## ---- fpv_clean ----
+# ---- fpv_clean ----------------------------------------------------------
+
 # Create dbh column
 fpv$dbh <- sqrt((4 * fpv$Area) / pi)
 
@@ -273,7 +302,8 @@ fpv <- fpv[fpv$code_name %in% species$code_name, ]
 fpv <- fpv[with(fpv, order(code_name, dbh)), ]
 
 
-## ---- fpv_min_dbh ----
+# ---- fpv_min_dbh --------------------------------------------------------
+
 # Store uncorrected min dbhs
 min_dbh <- ddply(fpv, 
                  .(code_name), 
@@ -282,14 +312,17 @@ min_dbh <- ddply(fpv,
                  n.trees = length(dbh))
 
 
-## ---- fpv_plot_dbh ----
+# ---- fpv_plot_dbh -------------------------------------------------------
+
 # Look at unchecked min dbhs, log tranformed
 ggplot(fpv, aes(x = code_name, y = log(dbh))) + 
   geom_boxplot(width=0.5) + 
   theme(axis.text.x = element_text(angle=90, vjust=0.5))
 
 
-## ---- fpv_fix_dbh_verbose ----
+
+# ---- fpv_fix_dbh_verbose ------------------------------------------------
+
 # # Check species with the most egregious lower outliers:
 # # ACOL, AEDU, ARET, BCRA, FCOT, FMOR, FOBT, KCAL, 
 # # LSPE, MCHI, MTIN, RTHU, SOBO
@@ -359,7 +392,8 @@ ggplot(fpv, aes(x = code_name, y = log(dbh))) +
 #   head(subset(fpv, code_name == "SOBO"))$dbh[2]
 
 
-## ---- fpv_fix_dbh_brief ----
+# ---- fpv_fix_dbh_brief --------------------------------------------------
+
 # Fix species with the most egregious lower outliers:
 # ACOL, AEDU, ARET, BCRA, FCOT, FMOR, KCAL, 
 # LSPE, MCHI, MTIN, SOBO
@@ -397,7 +431,8 @@ min_dbh[min_dbh$code_name == "SOBO", ]$threshold_dbh <-
   head(subset(fpv, code_name == "SOBO"))$dbh[2]
 
 
-## ---- fpv_dbh_extra ----
+# ---- fpv_dbh_extra ------------------------------------------------------
+
 min_dbh[min_dbh$code_name == "TAME", ]$threshold_dbh <- 
   rev(sort(subset(tr, species_name == "Trichilia americana")$dbh))[1]
 
@@ -408,7 +443,8 @@ min_dbh[min_dbh$code_name == "SGLN", ]$threshold_dbh <-
   rev(sort(subset(tr, species_name == "Sapium glandulosum")$dbh))[2]
 
 
-## ---- tr_filter ----
+# ---- tr_filter ----------------------------------------------------------
+
 # Restrict transect data to pheno species
 tr_pheno <- tr_pheno[tr_pheno$code_name %in% species$code_name, ]
 
@@ -416,7 +452,8 @@ tr_pheno <- tr_pheno[tr_pheno$code_name %in% species$code_name, ]
 tr_pheno <- subset(tr_pheno, !is.na(dbh))
 
 
-## ---- tr_test_usable ----
+# ---- tr_test_usable -----------------------------------------------------
+
 # Set "usable" flag to indicate if tree dbh >= threshold
 tr_pheno$usable <- FALSE
 for(i in 1:nrow(tr_pheno))
@@ -426,6 +463,9 @@ for(i in 1:nrow(tr_pheno))
                      as.character(tr_pheno[i, ]$code_name)),]$threshold_dbh)
 }
 
+# Write csv for later use
+# write.csv(tr_pheno, "tr_pheno.csv", row.names = FALSE)
+
 # Count number of usable transect trees for each species
 count_usable <- ddply(tr_pheno,
                       .(code_name),
@@ -434,11 +474,13 @@ count_usable <- ddply(tr_pheno,
 names(count_usable)[2] <- "num_trees"
 
 
-## ---- tr_table_usable ----
+# ---- tr_table_usable ----------------------------------------------------
+
 print(xtable(count_usable), type = "html")
 
 
-## ---- biomass_total ----
+# ---- biomass_total ------------------------------------------------------
+
 biomass <- ddply(tr_pheno, .(code_name), 
                  function(df) 
                    sum(df[df$usable == TRUE,]$prop_in_transect * 
@@ -457,7 +499,8 @@ biomass$area_total <- ddply(tr_pheno,
                                              na.rm=TRUE))[, 2]
 
 
-## ---- biomass_plot_max ----
+# ---- biomass_plot_max ---------------------------------------------------
+
 ggplot(biomass, aes(x = code_name, 
                     y = biomass_max_kg_ha)) + 
   geom_bar(stat = "identity") + 
@@ -465,7 +508,8 @@ ggplot(biomass, aes(x = code_name,
   labs(x = "Code", y = "Potential peak biomass (kg / ha)")
 
 
-## ---- biomass_available1 ----
+# ---- biomass_available1 -------------------------------------------------
+
 biomass_avail <- merge(fruit_avail, 
                        biomass, 
                        by.x = "code_name", 
@@ -478,21 +522,26 @@ biomass_avail$biomass_monthly_kg <-
   biomass_avail$value * biomass_avail$biomass_max_kg_ha
 
 
-## ---- biomass_monthly1 ----
+# ---- biomass_monthly1 ---------------------------------------------------
+
 fruit_seas_avail <- ddply(biomass_avail, 
                           .(month_of), 
                           summarize, 
                           combined_monthly_kg = 
                             sum(biomass_monthly_kg, na.rm = TRUE))
 
-## ---- biomass_plot_monthly1 ----
+
+# ---- biomass_monthly1 ---------------------------------------------------
+
 ggplot(fruit_seas_avail, 
        aes(x = month_of, 
            y = combined_monthly_kg)) + 
   geom_bar(stat = "identity") +
   labs(x = "Month", y = "Fruit biomass (kg / ha)")
 
-## ---- biomass_available2 ----
+
+# ---- biomass_available2 -------------------------------------------------
+
 biomass_avail <- biomass_avail[biomass_avail$code_name != "GULM" &
                                  biomass_avail$code_name != "LCAN" &
                                  biomass_avail$code_name != "LSPE" &
@@ -505,7 +554,9 @@ fruit_seas_avail <- ddply(biomass_avail,
                           combined_monthly_kg = sum(biomass_monthly_kg, 
                                                     na.rm=TRUE))
 
-## ---- biomass_plot_monthly2 ----
+
+# ---- biomass_plot_monthly2 ----------------------------------------------
+
 ggplot(fruit_seas_avail, 
        aes(x = month_of, 
            y = combined_monthly_kg)) + 
@@ -515,11 +566,14 @@ ggplot(fruit_seas_avail,
 # Write csv for later use
 # write.csv(fruit_seas_avail, "biomass_monthly.csv", row.names = FALSE)
 
-## ---- biomass_sum ----
+
+# ---- biomass_sum --------------------------------------------------------
+
 sum(fruit_seas_avail$combined_monthly_kg)
 
 
-## ---- bioimass_interpolation ----
+# ---- bioimass_interpolation ---------------------------------------------
+
 # Add one additional january to the end for a complete year
 biomass_monthly <- rbind(fruit_seas_avail, fruit_seas_avail[1, ])
 
@@ -544,7 +598,9 @@ biomass_daily$spline <- spline(x = biomass_monthly$day_of_year,
                                y = biomass_monthly$combined_monthly_kg, 
                                n=365)$y
 
-## ---- biomass_interpolation_plot ----
+
+# ---- biomass_interpolation_plot -----------------------------------------
+
 plot(spline(x = biomass_monthly$day_of_year, 
             y = biomass_monthly$combined_monthly_kg, 
             n=365))
@@ -553,7 +609,9 @@ points(x = biomass_monthly$day_of_year,
        col="red", 
        pch=16)
 
-## ---- biomass_study_period ----
+
+# ---- biomass_study_period -----------------------------------------------
+
 start_date <- as.Date("2009-11-16")
 end_date <- as.Date("2012-12-15")
 
@@ -569,7 +627,9 @@ biomass_dates <- merge(biomass_dates, biomass_daily,
 biomass_dates <- biomass_dates[with(biomass_dates, 
                                     order(date_of)), ]
 
-## ---- biomass_study_period_plot ----
+
+# ---- biomass_study_period_plot ------------------------------------------
+
 ggplot() + 
   geom_area(data = biomass_dates, 
             aes(x = as.Date(date_of), y = spline), 
@@ -582,3 +642,160 @@ ggplot() +
         panel.grid.minor = element_blank()) +
   labs(x = "Month", y = "Available fruit biomass (kg/ha)")
   
+
+
+# ---- habitat_workspace --------------------------------------------------
+
+Sys.setenv(TZ='UTC')
+list.of.packages <- c("ggplot2", "RColorBrewer", "plyr", "scales", 
+                      "reshape2", "colorspace", "rgdal", "maptools")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(unlist(new.packages))
+lapply(list.of.packages, require, character.only = T)
+
+# Create HCL color palette for land cover maps
+lc_grad <- colorRampPalette(colors = rev(heat_hcl(4, h = c(130, 70), 
+                                                  c = c(80, 30), 
+                                                  l = c(45, 95), 
+                                                  power = c(1/5, 2))))(4)
+
+# ---- transect_habitat ---------------------------------------------------
+
+tr_pheno <- read.csv("tr_pheno.csv")
+
+tr_pheno$fruit_b_kg <- tr_pheno$prop_in_transect * 47 * 
+  (tr_pheno$dbh ^ 1.9) / 1000
+
+lc <- readGDAL(fname = "~/Dropbox/AnalysisPhD/Spatial/raster/2011LandCover/LS_2011_LC.tif")
+fullgrid(lc) <- FALSE
+names(lc) <- "habitat"
+
+tr_tree_points<- SpatialPointsDataFrame(coords = cbind(tr_pheno$x, tr_pheno$y),proj4string = CRS("+proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"), data = tr_pheno[, c(1:9, 12:18)])
+
+tr_tree_points$habitat <- unlist(over(tr_tree_points, lc))
+tr_trees_df<- data.frame(tr_tree_points)
+tr_trees_df$habitat <- mapvalues(factor(tr_trees_df$habitat),
+                          from = c("1", "2", "3", "4"), 
+                          to = c("Shrubland", "Early", "Intermediate", "Mature"))
+
+# Remove wind-dispersed species
+tr_trees_df <- tr_trees_df[tr_trees_df$code_name != "GULM" &
+                                 tr_trees_df$code_name != "LCAN" &
+                                 tr_trees_df$code_name != "LSPE" &
+                                 tr_trees_df$code_name != "BUNG" &
+                                 tr_trees_df$code_name != "CCAN", ]
+
+lc_df <- as.data.frame(lc)
+lc$habitat <- mapvalues(factor(lc$habitat),
+                        from = c("1", "2", "3", "4"), 
+                        to = c("Shrubland", "Early", "Intermediate", "Mature"))
+
+
+# ---- plot_species_habitats ----------------------------------------------
+
+ggplot(subset(tr_trees_df, usable == TRUE & !is.na(habitat)), 
+       aes(x = species_name, fill = factor(habitat))) + 
+  geom_bar(position = "fill", color = "black") + 
+  scale_fill_manual(values = lc_grad, name = "Habitat") + 
+  coord_flip() + 
+  theme(legend.position = "bottom") + 
+  labs(y = "Proportion", x = "Species")
+
+
+# ---- max_fruit_habitat --------------------------------------------------
+
+biom_df <- ddply(subset(tr_trees_df, usable == TRUE), .(habitat), 
+                 summarize, sum(fruit_b_kg))
+names(biom_df) <- c("habitat", "fruit_b_kg")
+biom_df <- biom_df[1:4, ]
+biom_df$prop <- biom_df$fruit_b_kg / sum(biom_df$fruit_b_kg)
+
+
+tr_lines <- readShapeLines(fn = "~/Dropbox/AnalysisPhD/Spatial/Shapefiles/Transects/TransectLines_Project.shp", proj4string = CRS("+proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0"))
+tr_lines_finished <- tr_lines[tr_lines@data$Finished == 1, ]@data
+names(tr_lines_finished)[9:12] <- c("Shrubland", "Early", "Intermediate", "Mature")
+
+tr_habitat_area <- melt(tr_lines_finished, id.vars = c("Transect", "Finished"), 
+              measure.vars = c("Shrubland", "Early", "Intermediate", "Mature"))
+
+tr_habitat_area <- ddply(tr_habitat_area, .(variable), 
+                         summarize, sum(value, na.rm = TRUE) * 2)
+
+names(tr_habitat_area) <- c("habitat", "total_area")
+
+biom_df <- merge(biom_df, tr_habitat_area, by.x = "habitat", by.y = "habitat")
+biom_df$productivity <- biom_df$fruit_b_kg / (biom_df$total_area / (100 * 100))
+
+
+# ---- plot_transects -----------------------------------------------------
+
+tr_plot <- fortify(tr_lines[tr_lines@data$Finished == 1, ])
+
+ggplot() + 
+  geom_raster(data = lc_df, aes(x = x, y = y, fill = factor(habitat))) + 
+  geom_path(data = tr_plot, aes(x = long, y = lat, group = id), 
+            size = 1, color = "red") + 
+#   geom_point(data = tr_trees_df, aes(x = coords.x1, y = coords.x2), 
+#              size = 0.5, alpha = 0.5) + 
+  scale_fill_manual(values = lc_grad, guide = FALSE) + 
+  coord_fixed() + 
+  scale_x_continuous(limits = c(min(tr_trees_df$coords.x1) - 100, 
+                                max(tr_trees_df$coords.x1)) + 100) + 
+  scale_y_continuous(limits = c(min(tr_trees_df$coords.x2) - 100, 
+                                max(tr_trees_df$coords.x2)) + 100) + 
+  labs(x = "", y = "")
+
+
+# ---- plot_max_fruit_habitat ---------------------------------------------
+
+ggplot(biom_df, aes(x = habitat, y = productivity, fill = habitat)) + 
+  geom_bar(stat = "identity", color = "black") + 
+  scale_fill_manual(guide = FALSE, values = lc_grad) + 
+  labs(x = "Habitat", y = "Max theoretical fruit production (kg / ha)")
+
+
+# ---- monthly_fruit_habitat ----------------------------------------------
+
+fruit_avail <- read.csv("fruit_avail.csv")
+
+mass_species_habitat <- ddply(subset(tr_trees_df, !is.na(habitat)), 
+                              .(species_name, habitat), 
+                              summarize, 
+                              sum_b = sum(fruit_b_kg, na.rm = TRUE))
+
+monthly_species_habitat <- merge(fruit_avail, mass_species_habitat, 
+                                 by.x = "species_name", 
+                                 by.y = "species_name")
+
+monthly_biomass_habitat <- ddply(monthly_species_habitat, 
+                                 .(month_of, habitat), 
+                                 summarize,
+                                 total_b = sum(value * sum_b, na.rm = TRUE))
+
+monthly_biomass_habitat <- merge(monthly_biomass_habitat, tr_habitat_area, 
+                                 by.x = "habitat", by.y = "habitat")
+
+monthly_biomass_habitat$productivity <- monthly_biomass_habitat$total_b / (monthly_biomass_habitat$total_area / (100 * 100))
+
+monthly_biomass_habitat$month_of <- factor(monthly_biomass_habitat$month_of, 
+                                           levels = month.abb)
+monthly_biomass_habitat <- arrange(monthly_biomass_habitat, habitat, month_of)
+
+# ---- plot_monthly_fruit_habitat1 ----------------------------------------
+
+ggplot(monthly_biomass_habitat, 
+       aes(x = habitat, y = productivity, fill = habitat)) + 
+  geom_bar(stat = "identity", color = "black") + 
+  scale_fill_manual(guide = FALSE, values = lc_grad) + 
+  labs(x = "Habitat", y = "Fruit production (kg / ha)") + 
+  facet_wrap(~month_of, ncol = 3)
+
+# ---- plot_monthly_fruit_habitat2 ----------------------------------------
+
+# Alternate grouping
+ggplot(monthly_biomass_habitat, 
+       aes(x = month_of, y = productivity, fill = habitat)) + 
+  geom_bar(stat = "identity", color = "black") + 
+  scale_fill_manual(guide = FALSE, values = lc_grad) + 
+  labs(x = "Month", y = "Fruit production (kg / ha)") + 
+  facet_wrap(~habitat)

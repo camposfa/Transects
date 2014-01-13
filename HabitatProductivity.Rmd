@@ -1,0 +1,68 @@
+Habitat productivity
+==============================
+
+#### Up to [data sets](../index.html)
+******
+Source files available on [github](https://github.com/camposfa/Transects)
+<br>
+
+```{r echo=FALSE}
+opts_chunk$set(fig.path = 'figure/transects/', 
+               fig.height = 6, 
+               fig.width = 12, 
+               tidy = FALSE, 
+               warning = FALSE,
+               cache = TRUE)
+read_chunk('fruit_biomass.R')
+```
+
+## Analyis steps:
+1. Begin with the potential fruit production of each transect tree, as described [here](http://www.ucalgary.ca/~facampos/data/fruit/).
+2. Determine the habitat type for each transect tree.
+3. Determine the total area of each habitat type sampled by the transects. I did this by overlaying the transect lines on the habitat map and calculating the exact area sampled for each type.
+4. Calculate _potential_ (i.e., not adjusted for phenology) fruit production for each species in each habitat type (sum over all individuals of same species in each habitat type).
+5. Adjust these values for phenology using monthly availability indices for each species.
+5. Calculate the sum of "actual" fruit production over all species for each habitat type in each month.
+6. Divide by the area of each habitat type to obtain total fruit biomass per ha for each habitat type in each month
+
+
+```{r habitat_workspace, echo = FALSE, message = FALSE, results = 'hide'}
+```
+
+```{r transect_habitat, echo = FALSE, results='hide'}
+```
+
+```{r max_fruit_habitat, echo = FALSE}
+```
+
+```{r monthly_fruit_habitat, echo = FALSE}
+```
+
+### Transect map
+
+Here is a plot of the transects on a map of land cover. These are the "ideal" transects, by which I mean they are exactly straight and run between the two predefined endpoints. Based on the location of the tree GPS points, these ideal transects sometimes differ slightly from the actual paths walked. This may be due to GPS errors, deviations from the straight line, or whatever. I don't think it's a big deal though, because most of the points are close enough to the transects (within reasonable error), and there's no reason to expect the deviations to be biased against any particular habitat type.
+
+```{r plot_transects, echo = FALSE}
+```
+
+### Habitat occurrence by species
+
+This plot shows the proportion of transect individuals (small ones excluded) for each tree species found in each of the four habitat types. This generally agrees with my intuition for where the species should be found. Small sample size may explain some slightly weird cases like SEXC and TMAR. It's not perfect, but it's probably a reasonable approximation.
+
+```{r plot_species_habitats, fig.height = 10, fig.width = 8, echo = FALSE}
+```
+
+Here's a plot showing the maximum fruit production that could be achieved by the average hectare of each habitat type, __if every suitably-sized tree were fruiting at its maximum potential__. This would never happen due to phenological variability. Wind-dispersed species have been removed.
+
+```{r plot_max_fruit_habitat, echo = FALSE}
+```
+
+Here's a more realistic plot that incorporates monthly phenology (using the same smoothing technique that I used previously). Here, we can see that shrubland is pretty much always bad and mature forest is always better for fruit production, but the relative differences among the forest types vary throughout the year. The disparity between mature forest and other habitat types appears to be greatest during the early and middle wet season. The interpretation here would be that, __with regard to fruit only__, the relative attractiveness of mature forest may be greatest during the early and middle wet season. Obviously, there are other factors that could tip the balance, such as the abundance of insects and the need for shady resting areas.
+
+```{r plot_monthly_fruit_habitat1, echo = FALSE, fig.height = 8}
+```
+
+Finally, here are the same data, just grouped differently to see the month-by-month profiles for each habitat type. Not quite sure what to make of these patterns...
+
+```{r plot_monthly_fruit_habitat2, echo = FALSE}
+```
